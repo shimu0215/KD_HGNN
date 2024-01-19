@@ -23,7 +23,8 @@ def run_mlp_label(args, data):
     input_size = X_train.shape[1]
     hidden_size = 128
     output_size = num_class
-    model = MLP(input_dim=input_size, hidden_dim=hidden_size, output_dim=output_size)
+    model = MLP(input_dim=input_size, hidden_dim=hidden_size, output_dim=output_size, dropout_ratio=args.dropout_ratio,
+                num_layers=args.num_layers)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.0003)

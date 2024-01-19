@@ -28,8 +28,9 @@ class MLP(torch.nn.Module):
             input_dim,
             output_dim,
             hidden_dim=128,
-            num_layers=2,
-            dropout_ratio=0.4,
+            num_layers=3,
+            dropout_ratio=0.1,
+            embedding_dim=128,
             norm_type="none",
 
     ):
@@ -42,6 +43,9 @@ class MLP(torch.nn.Module):
 
         if num_layers == 1:
             self.layers.append(torch.nn.Linear(input_dim, output_dim))
+        elif num_layers == 2:
+            self.layers.append(torch.nn.Linear(input_dim, embedding_dim))
+            self.layers.append(torch.nn.Linear(embedding_dim, output_dim))
         else:
             self.layers.append(torch.nn.Linear(input_dim, hidden_dim))
             if self.norm_type == "batch":
@@ -49,14 +53,15 @@ class MLP(torch.nn.Module):
             elif self.norm_type == "layer":
                 self.norms.append(torch.nn.LayerNorm(hidden_dim))
 
-            for i in range(num_layers - 2):
+            for i in range(num_layers - 3):
                 self.layers.append(torch.nn.Linear(hidden_dim, hidden_dim))
                 if self.norm_type == "batch":
                     self.norms.append(torch.nn.BatchNorm1d(hidden_dim))
                 elif self.norm_type == "layer":
                     self.norms.append(torch.nn.LayerNorm(hidden_dim))
 
-            self.layers.append(torch.nn.Linear(hidden_dim, output_dim))
+            self.layers.append(torch.nn.Linear(hidden_dim, embedding_dim))
+            self.layers.append(torch.nn.Linear(embedding_dim, output_dim))
 
     def forward(self, feats):
         h = feats
@@ -82,15 +87,16 @@ class HAN(nn.Module):
 
     def forward(self, x_dict, edge_index_dict, node_type, return_metapath_level_embedding=False):
         if return_metapath_level_embedding:
-            out, semantic_attention_weights, metapath_level_embedding = self.han_conv(x_dict, edge_index_dict,
-                                                                                      return_metapath_level_embedding=return_metapath_level_embedding)
-            out = self.lin(out[node_type])
-            return out, semantic_attention_weights, metapath_level_embedding
+            embedding, semantic_attention_weights, metapath_level_embedding = \
+                self.han_conv(x_dict, edge_index_dict, return_metapath_level_embedding=return_metapath_level_embedding)
+            out = self.lin(embedding[node_type])
+            return out, embedding, semantic_attention_weights, metapath_level_embedding
 
-        out = self.han_conv(x_dict, edge_index_dict,
-                            return_metapath_level_embedding=return_metapath_level_embedding)
-        out = self.lin(out[node_type])
-        return out
+        embedding = self.han_conv(x_dict, edge_index_dict,
+                                  return_metapath_level_embedding=return_metapath_level_embedding)
+        out = self.lin(embedding[node_type])
+        return out, embedding
+
 
 class HGT(torch.nn.Module):
     def __init__(self, hidden_channels, out_channels, num_heads, num_layers, data):
@@ -117,5 +123,6 @@ class HGT(torch.nn.Module):
         for conv in self.convs:
             x_dict = conv(x_dict, edge_index_dict)
 
-        return self.lin(x_dict[node_type])
+        out = self.lin(x_dict[node_type])
 
+        return out, x_dict

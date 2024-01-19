@@ -4,11 +4,13 @@ from models import HAN
 import torch
 import torch.nn.functional as F
 
+from data_prepare import load_data_metapath
+from mlp_KD import get_similarity
 
 @torch.no_grad()
 def test(model, data, node_type) -> List[float]:
     model.eval()
-    pred = model(data.x_dict, data.edge_index_dict, node_type).argmax(dim=-1)
+    pred = model(data.x_dict, data.edge_index_dict, node_type)[0].argmax(dim=-1)
 
     accs = []
     for split in ['train_mask', 'val_mask', 'test_mask']:
@@ -22,19 +24,19 @@ def train_HAN(args, data):
     node_type = args.node
     num_class = args.num_class
 
-    model = HAN(in_channels=-1, out_channels=num_class, data=data)
+    model = HAN(in_channels=-1, out_channels=num_class, data=data, hidden_channels=args.teacher_hidden)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     data, model = data.to(device), model.to(device)
 
     with torch.no_grad():  # Initialize lazy modules.
-        out = model(data.x_dict, data.edge_index_dict, args.node)
+        out, embedding = model(data.x_dict, data.edge_index_dict, args.node)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.001)
 
     def train() -> float:
         model.train()
         optimizer.zero_grad()
-        out = model(data.x_dict, data.edge_index_dict, args.node)
+        out, embedding = model(data.x_dict, data.edge_index_dict, args.node)
         mask = data[node_type].train_mask
         loss = F.cross_entropy(out[mask], data[node_type].y[mask])
         loss.backward()
@@ -68,14 +70,18 @@ def train_HAN(args, data):
 
     torch.save({'model_state_dict': model.state_dict()}, path + args.teacher_model)
     with torch.no_grad():
-        predictions, semantic_attention_weights, metapath_level_embedding = model(data.x_dict, data.edge_index_dict,
-                                                                                  args.node,
-                                                                                  return_metapath_level_embedding=True)
+        predictions, embedding, semantic_attention_weights, metapath_level_embedding \
+            = model(data.x_dict, data.edge_index_dict, args.node, return_metapath_level_embedding=True)
 
     torch.save(predictions, path + 'result')  # 0.5664
-    torch.save(semantic_attention_weights, path + 'semantic')
-    torch.save(metapath_level_embedding, path + 'metapath')
-    torch.save(model.lin.state_dict(), path + 'lin.pth')
+    torch.save(embedding, path + 'embedding')
+
+    metapath_data, _ = load_data_metapath(args)
+    teacher_similarity, _ = get_similarity(metapath_data, emb=embedding[node_type])
+    torch.save(teacher_similarity, path + 'sim')
+    # torch.save(semantic_attention_weights, path + 'semantic')
+    # torch.save(metapath_level_embedding, path + 'metapath')
+    # torch.save(model.lin.state_dict(), path + 'lin.pth')
 
     return test_acc
 

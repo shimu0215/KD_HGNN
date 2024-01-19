@@ -58,7 +58,7 @@ def resample(data):
 # Set random seed for reproducibility
 torch.manual_seed(123)
 
-path = osp.join(osp.dirname(osp.realpath(__file__)), '../../data/IMDB')
+path = osp.join(osp.dirname(osp.realpath(__file__)), '../../../data/IMDB')
 metapaths = [[('movie', 'actor'), ('actor', 'movie')],
              [('movie', 'director'), ('director', 'movie')]]
 transform = T.AddMetaPaths(metapaths=metapaths, drop_orig_edge_types=True,

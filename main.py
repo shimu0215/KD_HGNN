@@ -35,16 +35,18 @@ if __name__ == "__main__":
     torch.manual_seed(args.random_seed)
 
     if args.teacher_model == 'HGT':
-        data = load_data_HGT(args)
+        data, neighbor = load_data_HGT(args)
+        # args.embedding_size = 64
     else:
-        data = load_data_metapath(args)
+        data, neighbor = load_data_metapath(args)
+        # args.embedding_size = 128
 
     if args.retrain_teacher:
         acc_teacher = train_teacher_model(args, data)
         print('Accuracy of', args.teacher_model, " : ", acc_teacher)
 
     if args.train_student:
-        accuracy_KD = run_mlp_KD(args, data)
+        accuracy_KD = run_mlp_KD(args, data, neighbor)
         print("Accuracy of KD: ", accuracy_KD.item())
 
     if args.compare_to_mlp:
