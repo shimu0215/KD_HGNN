@@ -3,7 +3,9 @@ from torch.nn import Linear, ReLU
 import torch.nn.functional as F
 from torch_geometric.nn import SAGEConv, to_hetero
 from torch import nn
-from torch_geometric.nn import HANConv, HGTConv, Linear
+from torch_geometric.nn import Linear
+from HGNN.han_conv import HANConv
+from HGNN.hgt_conv import HGTConv
 from typing import Dict, List, Union
 
 
