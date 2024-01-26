@@ -25,7 +25,7 @@ def train_HAN(args, data):
     node_type = args.node
     num_class = data[node_type].y.unique().size(0)
 
-    model = HAN(in_channels=-1, out_channels=num_class, data=data, hidden_channels=args.teacher_hidden)
+    model = HAN(in_channels=-1, out_channels=num_class, data=data, hidden_channels=args.teacher_hidden, num_layers=args.teacher_num_layer)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     data, model = data.to(device), model.to(device)
 

@@ -65,15 +65,24 @@ class MLP(torch.nn.Module):
 
 class HAN(nn.Module):
     def __init__(self, data, in_channels: Union[int, Dict[str, int]],
-                 out_channels: int, hidden_channels=128, heads=8):
+                 out_channels: int, hidden_channels=128, heads=8, num_layers = 1):
         super().__init__()
-        self.han_conv = HANConv(in_channels, hidden_channels, heads=heads,
+        # self.han_conv = HANConv(in_channels, hidden_channels, heads=heads,
+        #                         dropout=0.6, metadata=data.metadata())
+        self.convs = torch.nn.ModuleList()
+        for _ in range(num_layers):
+            conv = HANConv(in_channels, hidden_channels, heads=heads,
                                 dropout=0.6, metadata=data.metadata())
+            self.convs.append(conv)
+
         self.lin = nn.Linear(hidden_channels, out_channels)
 
     def forward(self, x_dict, edge_index_dict, node_type):
 
-        embedding = self.han_conv(x_dict, edge_index_dict)
+        # embedding = self.han_conv(x_dict, edge_index_dict)
+        for conv in self.convs:
+            x_dict = conv(x_dict, edge_index_dict)
+            embedding = x_dict
         out = self.lin(embedding[node_type])
         return out, embedding
 

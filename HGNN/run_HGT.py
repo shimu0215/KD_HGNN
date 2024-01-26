@@ -24,7 +24,7 @@ def train_HGT(args, data):
     node_type = args.node
     num_class = data[node_type].y.unique().size(0)
 
-    model = HGT(hidden_channels=args.teacher_hidden, out_channels=num_class, num_heads=8, num_layers=1, data=data)
+    model = HGT(hidden_channels=args.teacher_hidden, out_channels=num_class, num_heads=8, num_layers=args.teacher_num_layer, data=data)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     data, model = data.to(device), model.to(device)
 
