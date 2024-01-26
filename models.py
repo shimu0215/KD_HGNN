@@ -70,8 +70,10 @@ class HAN(nn.Module):
         # self.han_conv = HANConv(in_channels, hidden_channels, heads=heads,
         #                         dropout=0.6, metadata=data.metadata())
         self.convs = torch.nn.ModuleList()
-        for _ in range(num_layers):
-            conv = HANConv(in_channels, hidden_channels, heads=heads,
+        self.convs.append(HANConv(in_channels, hidden_channels, heads=heads,
+                                dropout=0.6, metadata=data.metadata()))
+        for _ in range(num_layers - 1):
+            conv = HANConv(hidden_channels, hidden_channels, heads=heads,
                                 dropout=0.6, metadata=data.metadata())
             self.convs.append(conv)
 
