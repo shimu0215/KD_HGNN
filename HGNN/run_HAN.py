@@ -1,11 +1,12 @@
-from typing import Dict, List, Union
+from typing import List
 from models import HAN
 
 import torch
 import torch.nn.functional as F
 
 from data_prepare import load_data_metapath
-from mlp_KD import get_similarity
+from utils import evaluate_model, get_similarity
+
 
 @torch.no_grad()
 def test(model, data, node_type) -> List[float]:
@@ -22,7 +23,7 @@ def test(model, data, node_type) -> List[float]:
 
 def train_HAN(args, data):
     node_type = args.node
-    num_class = args.num_class
+    num_class = data[node_type].y.unique().size(0)
 
     model = HAN(in_channels=-1, out_channels=num_class, data=data, hidden_channels=args.teacher_hidden)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -44,14 +45,14 @@ def train_HAN(args, data):
         return float(loss)
 
     best_val_acc = 0
-    start_patience = patience = args.teacher_patient
+    start_patience = patience = args.teacher_patience
     epochs = args.teacher_epochs
     for epoch in range(1, epochs):
 
         loss = train()
         train_acc, val_acc, test_acc = test(model, data, node_type)
 
-        if epoch % 1 == 0:
+        if epoch % 10 == 0:
             print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Train: {train_acc:.4f}, '
                   f'Val: {val_acc:.4f}, Test: {test_acc:.4f}')
 
@@ -69,32 +70,33 @@ def train_HAN(args, data):
     path = './GNN_result/' + args.dataset + '/' + args.teacher_model + '/'
 
     torch.save({'model_state_dict': model.state_dict()}, path + args.teacher_model)
-    with torch.no_grad():
-        predictions, embedding, semantic_attention_weights, metapath_level_embedding \
-            = model(data.x_dict, data.edge_index_dict, args.node, return_metapath_level_embedding=True)
 
-    torch.save(predictions, path + 'result')  # 0.5664
+    with torch.no_grad():
+        model.eval()
+        predictions, embedding = model(data.x_dict, data.edge_index_dict, args.node)
+        acc, f1_macro, f1_micro = evaluate_model(data, node_type, predictions)
+
+    torch.save(predictions, path + 'result')
     torch.save(embedding, path + 'embedding')
 
     metapath_data, _ = load_data_metapath(args)
     teacher_similarity, _ = get_similarity(metapath_data, emb=embedding[node_type])
     torch.save(teacher_similarity, path + 'sim')
-    # torch.save(semantic_attention_weights, path + 'semantic')
-    # torch.save(metapath_level_embedding, path + 'metapath')
-    # torch.save(model.lin.state_dict(), path + 'lin.pth')
 
-    return test_acc
+    return acc, f1_macro, f1_micro
 
 
 def eval_HAN(args, data):
 
-    model = HAN(in_channels=-1, out_channels=args.num_class, data=data)
+    num_class = data[args.node].y.unique().size(0)
+    model = HAN(in_channels=-1, out_channels=num_class, data=data)
 
     path = './GNN_result/' + args.dataset + '/' + args.teacher_model + '/' + args.teacher_model
     record = torch.load(path)
 
     model.load_state_dict(record['model_state_dict'])
+    predictions = model(data.x_dict, data.edge_index_dict, args.node)[0].argmax(dim=-1)
 
-    train_acc, val_acc, test_acc = test(model, data, args.node)
+    acc, f1_macro, f1_micro = evaluate_model(data, args.node, predictions)
 
-    print(f'Train: {train_acc:.4f}, Val: {val_acc:.4f}, Test: {test_acc:.4f}')
+    return acc, f1_macro, f1_micro

@@ -3,14 +3,15 @@ import torch.nn as nn
 import torch.optim as optim
 
 from models import MLP
+from utils import get_f1_macro, get_f1_micro
 
-from typing import Dict, List, Union
+from typing import List
 
 
 def run_mlp_label(args, data):
 
     node_type = args.node
-    num_class = args.num_class
+    num_class = data[node_type].y.unique().size(0)
 
     train_mask = data[node_type].train_mask
     X_train = data.x_dict[node_type][train_mask]
@@ -21,13 +22,13 @@ def run_mlp_label(args, data):
     Y_test = data[node_type].y[test_mask]
 
     input_size = X_train.shape[1]
-    hidden_size = 128
+    hidden_size = args.hidden_size
     output_size = num_class
     model = MLP(input_dim=input_size, hidden_dim=hidden_size, output_dim=output_size, dropout_ratio=args.dropout_ratio,
                 num_layers=args.num_layers)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.0003)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     @torch.no_grad()
     def test() -> List[float]:
@@ -43,16 +44,16 @@ def run_mlp_label(args, data):
             accs.append(float(acc))
         return accs
 
-    start_patience = patience = 50
+    start_patience = patience = args.patience
 
     best_val_acc = 0
-    num_epochs = 300
+    num_epochs = args.epochs
 
-    model.train()
     for epoch in range(num_epochs):
+        model.train()
         # Forward pass
         _, outputs = model(X_train)
-        loss = criterion(outputs, Y_train)  # 0.4914
+        loss = criterion(outputs, Y_train)
 
         # Backward pass and optimization
         optimizer.zero_grad()
@@ -81,5 +82,7 @@ def run_mlp_label(args, data):
         model.eval()
         _, predictions = model(X_test)
         acc = (predictions.argmax(dim=-1) == Y_test).sum() / test_mask.sum()
+        f1_macro = get_f1_macro(labels=Y_test, predictions=predictions.argmax(dim=-1))
+        f1_micro = get_f1_micro(labels=Y_test, predictions=predictions.argmax(dim=-1))
 
-    return acc
+    return acc, f1_macro, f1_micro

@@ -1,16 +1,10 @@
-import os.path as osp
-
 import torch
 import torch.nn.functional as F
 
 from models import HGT
 
-import torch_geometric.transforms as T
-from torch_geometric.datasets import DBLP
-from torch_geometric.nn import HGTConv, Linear
-
 from data_prepare import load_data_metapath
-from mlp_KD import get_similarity
+from utils import evaluate_model, get_similarity
 
 
 @torch.no_grad()
@@ -28,9 +22,9 @@ def test(model, data, node_type):
 
 def train_HGT(args, data):
     node_type = args.node
-    num_class = args.num_class
+    num_class = data[node_type].y.unique().size(0)
 
-    model = HGT(hidden_channels=args.teacher_hidden, out_channels=num_class, num_heads=2, num_layers=1, data=data)
+    model = HGT(hidden_channels=args.teacher_hidden, out_channels=num_class, num_heads=8, num_layers=1, data=data)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     data, model = data.to(device), model.to(device)
 
@@ -50,8 +44,8 @@ def train_HGT(args, data):
         return float(loss)
 
     best_val_acc = 0
-    patience = start_patience = 30
-    epochs = 200
+    patience = start_patience = args.teacher_patience
+    epochs = args.teacher_epochs
 
     for epoch in range(1, epochs):
         loss = train()
@@ -89,13 +83,16 @@ def train_HGT(args, data):
 
 def eval_HGT(args, data):
 
-    model = HGT(hidden_channels=64, out_channels=args.num_class, num_heads=2, num_layers=1, data=data)
+    node_type = args.node
+    num_class = data[node_type].y.unique().size(0)
+    model = HGT(hidden_channels=args.teacher_hidden, out_channels=num_class, num_heads=8, num_layers=1, data=data)
 
     path = './GNN_result/' + args.dataset + '/' + args.teacher_model + '/' + args.teacher_model
     record = torch.load(path)
 
     model.load_state_dict(record['model_state_dict'])
+    predictions = model(data.x_dict, data.edge_index_dict, args.node)[0].argmax(dim=-1)
 
-    train_acc, val_acc, test_acc = test(model, data, args.node)
+    acc, f1_macro, f1_micro = evaluate_model(data, args.node, predictions)
 
-    print(f'Train: {train_acc:.4f}, Val: {val_acc:.4f}, Test: {test_acc:.4f}')
+    return acc, f1_macro, f1_micro

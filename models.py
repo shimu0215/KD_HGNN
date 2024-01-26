@@ -1,12 +1,10 @@
 import torch
-from torch.nn import Linear, ReLU
+from torch.nn import Linear
 import torch.nn.functional as F
-from torch_geometric.nn import SAGEConv, to_hetero
+from torch_geometric.nn import SAGEConv
 from torch import nn
-from torch_geometric.nn import Linear
-from HGNN.han_conv import HANConv
-from HGNN.hgt_conv import HGTConv
-from typing import Dict, List, Union
+from torch_geometric.nn import Linear, HANConv, HGTConv
+from typing import Dict, Union
 
 
 class GNN(torch.nn.Module):
@@ -32,16 +30,12 @@ class MLP(torch.nn.Module):
             hidden_dim=128,
             num_layers=3,
             dropout_ratio=0.1,
-            embedding_dim=128,
-            norm_type="none",
-
+            embedding_dim=128
     ):
         super(MLP, self).__init__()
         self.num_layers = num_layers
-        self.norm_type = norm_type
         self.dropout = torch.nn.Dropout(dropout_ratio)
         self.layers = torch.nn.ModuleList()
-        self.norms = torch.nn.ModuleList()
 
         if num_layers == 1:
             self.layers.append(torch.nn.Linear(input_dim, output_dim))
@@ -50,17 +44,9 @@ class MLP(torch.nn.Module):
             self.layers.append(torch.nn.Linear(embedding_dim, output_dim))
         else:
             self.layers.append(torch.nn.Linear(input_dim, hidden_dim))
-            if self.norm_type == "batch":
-                self.norms.append(torch.nn.BatchNorm1d(hidden_dim))
-            elif self.norm_type == "layer":
-                self.norms.append(torch.nn.LayerNorm(hidden_dim))
 
             for i in range(num_layers - 3):
                 self.layers.append(torch.nn.Linear(hidden_dim, hidden_dim))
-                if self.norm_type == "batch":
-                    self.norms.append(torch.nn.BatchNorm1d(hidden_dim))
-                elif self.norm_type == "layer":
-                    self.norms.append(torch.nn.LayerNorm(hidden_dim))
 
             self.layers.append(torch.nn.Linear(hidden_dim, embedding_dim))
             self.layers.append(torch.nn.Linear(embedding_dim, output_dim))
@@ -72,8 +58,6 @@ class MLP(torch.nn.Module):
             h = layer(h)
             if l != self.num_layers - 1:
                 h_list.append(h)
-                if self.norm_type != "none":
-                    h = self.norms[l](h)
                 h = F.relu(h)
                 h = self.dropout(h)
         return h_list, h
@@ -87,15 +71,9 @@ class HAN(nn.Module):
                                 dropout=0.6, metadata=data.metadata())
         self.lin = nn.Linear(hidden_channels, out_channels)
 
-    def forward(self, x_dict, edge_index_dict, node_type, return_metapath_level_embedding=False):
-        if return_metapath_level_embedding:
-            embedding, semantic_attention_weights, metapath_level_embedding = \
-                self.han_conv(x_dict, edge_index_dict, return_metapath_level_embedding=return_metapath_level_embedding)
-            out = self.lin(embedding[node_type])
-            return out, embedding, semantic_attention_weights, metapath_level_embedding
+    def forward(self, x_dict, edge_index_dict, node_type):
 
-        embedding = self.han_conv(x_dict, edge_index_dict,
-                                  return_metapath_level_embedding=return_metapath_level_embedding)
+        embedding = self.han_conv(x_dict, edge_index_dict)
         out = self.lin(embedding[node_type])
         return out, embedding
 

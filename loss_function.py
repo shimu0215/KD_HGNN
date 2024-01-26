@@ -6,17 +6,25 @@ import torch.nn.functional as F
 class LogitLoss(nn.Module):
     def __init__(self):
         super(LogitLoss, self).__init__()
-        self.cross_entropy_loss = nn.CrossEntropyLoss()
         self.kld_loss = nn.KLDivLoss()
 
-    def forward(self, prediction_train, prediction, soft_target, label, alpha=0.5):
-        loss1 = self.cross_entropy_loss(prediction_train, label)
-
+    def forward(self, prediction, soft_target):
         log_probs = F.log_softmax(prediction, dim=1)
-        loss2 = self.kld_loss(log_probs, F.softmax(soft_target, dim=1))
+        loss = self.kld_loss(log_probs, F.softmax(soft_target, dim=1))
 
-        # total_loss = alpha * loss1 + (1 - alpha) * loss2
-        return loss1, loss2
+        return loss
+
+
+class GtLoss(nn.Module):
+    def __init__(self):
+        super(GtLoss, self).__init__()
+        self.cross_entropy_loss = nn.CrossEntropyLoss()
+
+    def forward(self, prediction_train, label):
+        loss = self.cross_entropy_loss(prediction_train, label)
+
+        return loss
+
 
 class StructureLoss(nn.Module):
     def __init__(self):
@@ -24,25 +32,26 @@ class StructureLoss(nn.Module):
         self.mse_loss = nn.MSELoss()
 
     def forward(self, prediction, target, student_sim_ind):
+        predictions = prediction[0]
+        targets = target[0][student_sim_ind[0]]
 
-        loss = 0
+        for i in range(1, len(prediction)):
+            predictions = torch.cat([predictions, prediction[i]])
+            targets = torch.cat([targets, target[i][student_sim_ind[i]]])
 
-        for i in range(len(prediction)):
+        struc_loss = self.mse_loss(predictions, targets)
 
-            # loss += self.mse_loss(prediction[0], target[0][student_sim_ind[0]])
-            loss += self.mse_loss(prediction[i], target[i][student_sim_ind[i]])
+        return struc_loss / len(prediction)
 
-        return loss / len(prediction)
 
 class EmbeddingLoss(nn.Module):
     def __init__(self):
         super(EmbeddingLoss, self).__init__()
-        # self.mse_loss = nn.CosineEmbeddingLoss()
-        self.mse_loss = nn.MSELoss()
+        self.cos_loss = nn.CosineEmbeddingLoss()
+        # self.mse_loss = nn.MSELoss()
 
     def forward(self, prediction, target):
-
-        # loss = self.mse_loss(prediction[-1], target, torch.ones(target.size()[0]))
-        loss = self.mse_loss(prediction[-1], target)
+        loss = self.cos_loss(prediction[-1], target, torch.ones(target.size()[0]))
+        # loss = self.mse_loss(prediction[-1], target)
 
         return loss

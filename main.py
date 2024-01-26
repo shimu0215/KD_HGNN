@@ -2,56 +2,68 @@ from argument import parse_opt
 from HGNN.run_HAN import train_HAN, eval_HAN
 from HGNN.run_HGT import train_HGT, eval_HGT
 from data_prepare import load_data_metapath, load_data_HGT
+from utils import set_seed
 from mlp_label import run_mlp_label
 from mlp_KD import run_mlp_KD
-from models import HAN, HGT
-import numpy as np
-import torch
 
 
 def train_teacher_model(args, data):
+    """
+    train the teacher model
+    :return: evaluate result of the teacher model
+    """
     if args.teacher_model == 'HAN':
-        acc_teacher = train_HAN(args, data)
-        return acc_teacher
+        res_teacher = train_HAN(args, data)
+        return res_teacher
 
     if args.teacher_model == 'HGT':
-        acc_teacher = train_HGT(args, data)
-        return acc_teacher
+        res_teacher = train_HGT(args, data)
+        return res_teacher
+
 
 def eval_model(args, data):
-
+    """
+    Evaluate the teacher model and print the result
+    """
     if args.teacher_model == 'HAN':
-        eval_HAN(args, data)
+        train_acc, val_acc, test_acc = eval_HAN(args, data)
+        return train_acc, val_acc, test_acc
     elif args.teacher_model == 'HGT':
-        eval_HGT(args, data)
+        train_acc, val_acc, test_acc = eval_HGT(args, data)
+        return train_acc, val_acc, test_acc
 
 
 if __name__ == "__main__":
+
+    # get parameters
     args = parse_opt()
     print(args)
 
     # set random seeds
-    np.random.seed(args.random_seed)
-    torch.manual_seed(args.random_seed)
+    set_seed(args.random_seed)
 
+    # load data and one hop neighbor
     if args.teacher_model == 'HGT':
         data, neighbor = load_data_HGT(args)
-        # args.embedding_size = 64
     else:
         data, neighbor = load_data_metapath(args)
-        # args.embedding_size = 128
 
+    # train teacher model
     if args.retrain_teacher:
-        acc_teacher = train_teacher_model(args, data)
-        print('Accuracy of', args.teacher_model, " : ", acc_teacher)
+        res_teacher = train_teacher_model(args, data)
+        print('Accuracy of', args.teacher_model, " : ", res_teacher)
 
+    # train student model
     if args.train_student:
-        accuracy_KD = run_mlp_KD(args, data, neighbor)
-        print("Accuracy of KD: ", accuracy_KD.item())
+        acc_mlp_KD, f1_macro_KD, f1_micro_KD = run_mlp_KD(args, data, neighbor)
+        print("KD-Acc: ", acc_mlp_KD.item(), " Macro-F1: ", f1_macro_KD.item(), " Micro-F1: ", f1_micro_KD.item())
 
+    # train a mlp with ground truth in train set
     if args.compare_to_mlp:
-        accuracy_label = run_mlp_label(args, data)
-        print('Accuracy of MLP: ', accuracy_label.item())
+        acc_mlp_mlp, f1_macro_mlp, f1_micro_mlp = run_mlp_label(args, data)
+        print("MLP-Acc: ", acc_mlp_mlp.item(), " Macro-F1: ", f1_macro_mlp.item(), " Micro-F1: ", f1_micro_mlp.item())
 
+    # evaluate teacher model
     if args.eval_teacher_model:
-        eval_model(args, data)
+        acc, f1_macro, f1_micro = eval_model(args, data)
+        print(f'Teacher-Acc: {acc:.4f}, Macro-F1: {f1_macro:.4f}, Micro-F1: {f1_micro:.4f}')
