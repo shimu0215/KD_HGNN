@@ -6,12 +6,12 @@ import torch.nn.functional as F
 
 
 def get_f1_macro(labels, predictions):
-    macro_f1 = f1_score(labels, predictions, average='macro')
+    macro_f1 = f1_score(labels, predictions.argmax(dim=-1), average='macro')
     return macro_f1
 
 
 def get_f1_micro(labels, predictions):
-    micro_f1 = f1_score(labels, predictions, average='micro')
+    micro_f1 = f1_score(labels, predictions.argmax(dim=-1), average='micro')
     return micro_f1
 
 
@@ -23,7 +23,7 @@ def evaluate_model(data, node_type, pred):
     f1_macro = get_f1_macro(labels=Y_test, predictions=predctions)
     f1_micro = get_f1_micro(labels=Y_test, predictions=predctions)
 
-    return acc, f1_macro, f1_micro
+    return acc.item(), f1_macro, f1_micro
 
 
 def set_seed(seed):

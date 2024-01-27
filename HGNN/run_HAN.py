@@ -52,7 +52,7 @@ def train_HAN(args, data):
         loss = train()
         train_acc, val_acc, test_acc = test(model, data, node_type)
 
-        if epoch % 10 == 0:
+        if epoch % 1 == 0:
             print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Train: {train_acc:.4f}, '
                   f'Val: {val_acc:.4f}, Test: {test_acc:.4f}')
 

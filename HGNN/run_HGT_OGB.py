@@ -91,7 +91,7 @@ def train_HGT_OGB(args, data):
         loss = train()
         val_result = test(val_loader)
 
-        if epoch % 1 == 0:
+        if epoch % 10 == 0:
             print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, '
                   f'Val: {val_result:.4f}')
 

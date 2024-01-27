@@ -67,25 +67,23 @@ def load_data_metapath(args):
         transform = T.AddMetaPaths(metapaths=metapaths, drop_orig_edge_types=True,
                                    drop_unconnected_node_types=True)
         dataset = IMDB(path, transform=transform)
-
-
-
         data = dataset[0]
-        data = DataLoader(data, batch_size=32, shuffle=True)
 
     if args.dataset == 'DBLP':
         args.node = 'author'
         path = osp.join(osp.dirname(osp.realpath(__file__)), '../../data/DBLP')
         neighbor = []
         if args.use_neighbor:
-            neighbor = get_one_hop_neighbor(args, IMDB(path).data)
+            neighbor = get_one_hop_neighbor(args, DBLP(path).data)
         metapaths = [[('author', 'paper'), ('paper', 'author')],
                      [('author', 'paper'), ('paper', 'term'), ('term', 'paper'), ('paper', 'author')],
                      [('author', 'paper'), ('paper', 'conference'), ('conference', 'paper'), ('paper', 'author')]]
         transform = T.AddMetaPaths(metapaths=metapaths, drop_orig_edge_types=True,
                                    drop_unconnected_node_types=True)
+        transform_2 = T.Constant(node_types='conference')
         dataset = DBLP(path, transform=transform)
         data = dataset[0]
+        data = transform_2(data)
 
     if args.dataset == 'OGB':
         args.node = 'paper'
@@ -153,7 +151,7 @@ def load_data_HGT(args, get_whole_OGB=False):
         path = osp.join(osp.dirname(osp.realpath(__file__)), '../../data/DBLP')
         neighbor = []
         if args.use_neighbor:
-            neighbor = get_one_hop_neighbor(args, IMDB(path).data)
+            neighbor = get_one_hop_neighbor(args, DBLP(path).data)
         dataset = DBLP(path, transform=T.Constant(node_types='conference'))
         data = dataset[0]
 

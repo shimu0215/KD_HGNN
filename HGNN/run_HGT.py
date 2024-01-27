@@ -51,7 +51,7 @@ def train_HGT(args, data):
         loss = train()
         train_acc, val_acc, test_acc = test(model, data, node_type)
 
-        if epoch % 1 == 0:
+        if epoch % 10 == 0:
             print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Train: {train_acc:.4f}, '
                   f'Val: {val_acc:.4f}, Test: {test_acc:.4f}')
 
@@ -71,6 +71,7 @@ def train_HGT(args, data):
     torch.save({'model_state_dict': model.state_dict()}, path + args.teacher_model)
     with torch.no_grad():
         predictions, embedding = model(data.x_dict, data.edge_index_dict, node_type)
+        acc, f1_macro, f1_micro = evaluate_model(data, node_type, predictions)
 
     torch.save(predictions, path + 'result')
     torch.save(embedding, path + 'embedding')
@@ -79,7 +80,7 @@ def train_HGT(args, data):
     teacher_similarity, _ = get_similarity(metapath_data, emb=embedding[node_type])
     torch.save(teacher_similarity, path + 'sim')
 
-    return test_acc
+    return acc, f1_macro, f1_micro
 
 def eval_HGT(args, data):
 

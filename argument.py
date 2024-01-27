@@ -5,7 +5,7 @@ def parse_opt():
     parser = argparse.ArgumentParser()
 
     # global settings
-    parser.add_argument('--dataset', type=str, default='OGB', help="select the dataset, IMDB / DBLP / AMiner")
+    parser.add_argument('--dataset', type=str, default='DBLP', help="select the dataset, IMDB / DBLP / AMiner")
     parser.add_argument('--node', type=str, default='movie', help="select the target node, movie / author")
     parser.add_argument('--random_seed', type=int, default=123, help=" ")
 
@@ -34,11 +34,11 @@ def parse_opt():
     parser.add_argument('--struc_weight', type=int, default=1, help="weight of loss on structural")
 
     # teacher settings
-    parser.add_argument('--teacher_model', type=str, default='HGT', help="select the teacher model, HAN / HGT")
+    parser.add_argument('--teacher_model', type=str, default='HAN', help="select the teacher model, HAN / HGT")
     parser.add_argument('--teacher_patience', type=int, default=100, help="patience for teacher")
-    parser.add_argument('--teacher_epochs', type=int, default=3, help="epochs for teacher")
+    parser.add_argument('--teacher_epochs', type=int, default=100, help="epochs for teacher")
     parser.add_argument('--teacher_hidden', type=int, default=128, help="hidden size for teacher")
-    parser.add_argument('--teacher_num_layer', type=int, default=2, help="hidden size for teacher")
+    parser.add_argument('--teacher_num_layer', type=int, default=1, help="hidden size for teacher")
 
     # split dataset
     parser.add_argument('--split', type=bool, default=False, help="re group the dataset")
