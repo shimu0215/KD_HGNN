@@ -4,15 +4,16 @@ from tqdm import tqdm
 
 from models import HGT
 
-from data_prepare import load_data_metapath
+from data_prepare import load_data_metapath, load_data_HGT
 from utils import evaluate_model, get_similarity
 
 
 def train_HGT_OGB(args, data):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    train_loader = data[0]
-    val_loader = data[1]
+    train_loader = data['train']
+    val_loader = data['val']
+    test_loader = data['test']
     node_type = args.node
     num_class = train_loader.data[node_type].y.unique().size(0)
 
@@ -32,16 +33,6 @@ def train_HGT_OGB(args, data):
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.001)
 
-    # def train():
-    #     model.train()
-    #     optimizer.zero_grad()
-    #     out, embedding = model(data.x_dict, data.edge_index_dict, node_type)
-    #     mask = data[node_type].train_mask
-    #     loss = F.cross_entropy(out[mask], data[node_type].y[mask])
-    #     loss.backward()
-    #     optimizer.step()
-    #     return float(loss)
-
     def train():
         model.train()
 
@@ -57,11 +48,27 @@ def train_HGT_OGB(args, data):
 
             total_examples += batch_size
             total_loss += float(loss) * batch_size
+            break
 
         return total_loss / total_examples
 
     @torch.no_grad()
     def test(loader):
+        model.eval()
+
+        total_examples = total_correct = 0
+        for batch in tqdm(loader):
+            batch = batch.to(device, 'edge_index')
+            batch_size = batch['paper'].batch_size
+            out = model(batch.x_dict, batch.edge_index_dict, node_type)[0][:batch_size]
+            pred = out.argmax(dim=-1)
+
+            total_examples += batch_size
+            total_correct += int((pred == batch['paper'].y[:batch_size]).sum())
+
+        return total_correct / total_examples
+
+    def get_result(loader):
         model.eval()
 
         total_examples = total_correct = 0
@@ -82,15 +89,15 @@ def train_HGT_OGB(args, data):
 
     for epoch in range(1, epochs):
         loss = train()
-        val_acc = test(val_loader)
+        val_result = test(val_loader)
 
         if epoch % 1 == 0:
             print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, '
-                  f'Val: {val_acc:.4f}')
+                  f'Val: {val_result:.4f}')
 
-        if best_val_acc <= val_acc:
+        if best_val_acc <= val_result:
             patience = start_patience
-            best_val_acc = val_acc
+            best_val_acc = val_result
         else:
             patience -= 1
 
@@ -98,12 +105,15 @@ def train_HGT_OGB(args, data):
             print('Stopping training as validation accuracy did not improve '
                   f'for {start_patience} epochs')
             break
+    test_result = test(test_loader)
 
     path = './GNN_result/' + args.dataset + '/' + args.teacher_model + '/'
 
     torch.save({'model_state_dict': model.state_dict()}, path + args.teacher_model)
+
+    whole_data, _ = load_data_HGT(args, True)
     with torch.no_grad():
-        predictions, embedding = model(data.x_dict, data.edge_index_dict, node_type)
+        predictions, embedding = model(whole_data.x_dict, whole_data.edge_index_dict, node_type)
 
     torch.save(predictions, path + 'result')
     torch.save(embedding, path + 'embedding')
@@ -112,7 +122,7 @@ def train_HGT_OGB(args, data):
     teacher_similarity, _ = get_similarity(metapath_data, emb=embedding[node_type])
     torch.save(teacher_similarity, path + 'sim')
 
-    return 0
+    return test_result
 
 def eval_HGT(args, data):
 

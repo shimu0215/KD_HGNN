@@ -15,9 +15,9 @@ def train_teacher_model(args, data):
     :return: evaluate result of the teacher model
     """
     if args.dataset == 'OGB':
-        if args.teacher_model == 'HAN':
-            res_teacher = train_HAN_OGB(args, data)
-            return res_teacher
+        # if args.teacher_model == 'HAN':
+        #     res_teacher = train_HAN_OGB(args, data)
+        #     return res_teacher
 
         if args.teacher_model == 'HGT':
             res_teacher = train_HGT_OGB(args, data)

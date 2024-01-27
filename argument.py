@@ -36,7 +36,7 @@ def parse_opt():
     # teacher settings
     parser.add_argument('--teacher_model', type=str, default='HGT', help="select the teacher model, HAN / HGT")
     parser.add_argument('--teacher_patience', type=int, default=100, help="patience for teacher")
-    parser.add_argument('--teacher_epochs', type=int, default=300, help="epochs for teacher")
+    parser.add_argument('--teacher_epochs', type=int, default=3, help="epochs for teacher")
     parser.add_argument('--teacher_hidden', type=int, default=128, help="hidden size for teacher")
     parser.add_argument('--teacher_num_layer', type=int, default=2, help="hidden size for teacher")
 

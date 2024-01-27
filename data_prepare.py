@@ -92,12 +92,14 @@ def load_data_metapath(args):
         path = osp.join(osp.dirname(osp.realpath(__file__)), '../../data/OGB_MAG')
         neighbor = []
         if args.use_neighbor:
-            neighbor = get_one_hop_neighbor(args, OGB_MAG(path, preprocess='TransE').data)
+            neighbor = get_one_hop_neighbor(args, OGB_MAG(path, preprocess='metapath2vec').data)
         metapaths = [[('paper', 'author'), ('author', 'paper')]]
-        transform = T.AddMetaPaths(metapaths=metapaths, drop_orig_edge_types=True,
-                                   drop_unconnected_node_types=True)
-        dataset = OGB_MAG(path, preprocess='TransE', transform=transform)
+        transform_1 = T.AddMetaPaths(metapaths=metapaths, drop_orig_edge_types=True, drop_unconnected_node_types=True)
+
+        transform_2 = T.ToUndirected(merge=True)
+        dataset = OGB_MAG(path, preprocess='TransE', transform=transform_1)
         data = dataset.data
+        data = transform_2(data)
 
     if args.split:
         data = re_split(args, data)
@@ -105,26 +107,37 @@ def load_data_metapath(args):
     return data, neighbor
 
 
-def load_data_HGT(args):
+def load_data_HGT(args, get_whole_OGB=False):
 
     if args.dataset == 'OGB':
         args.node = 'paper'
         path = osp.join(osp.dirname(osp.realpath(__file__)), '../../data/OGB_MAG')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         transform = T.ToUndirected(merge=True)
         dataset = OGB_MAG(path, preprocess='metapath2vec', transform=transform)
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         data = dataset[0].to(device, 'x', 'y')
+
+        if get_whole_OGB:
+            return data, {}
 
         train_input_nodes = ('paper', data['paper'].train_mask)
         val_input_nodes = ('paper', data['paper'].val_mask)
-        kwargs = {'batch_size': 256, 'num_workers': 6, 'persistent_workers': True}
+        test_input_nodes = ('paper', data['paper'].test_mask)
+        kwargs = {'batch_size': 1024, 'num_workers': 6, 'persistent_workers': True}
 
         train_loader = HGTLoader(data, num_samples=[1024] * 4, shuffle=True,
                                  input_nodes=train_input_nodes, **kwargs)
         val_loader = HGTLoader(data, num_samples=[1024] * 4,
                                input_nodes=val_input_nodes, **kwargs)
-        return [train_loader, val_loader], {}
+        test_loader = HGTLoader(data, num_samples=[1024] * 4,
+                               input_nodes=test_input_nodes, **kwargs)
+
+        data = {}
+        data['train'] = train_loader
+        data['val'] = val_loader
+        data['test'] = test_loader
+        return data, {}
 
     if args.dataset == 'IMDB':
         args.node = 'movie'
