@@ -80,14 +80,17 @@ class HAN(nn.Module):
         self.lin = nn.Linear(hidden_channels, out_channels)
 
     def forward(self, x_dict, edge_index_dict, node_type):
+        # x_dict = {
+        #     node_type: self.lin_dict[node_type](x).relu_()
+        #     for node_type, x in x_dict.items()
+        # }
 
         # embedding = self.han_conv(x_dict, edge_index_dict)
         for conv in self.convs:
             x_dict = conv(x_dict, edge_index_dict)
             embedding = x_dict
-        out = self.lin(embedding[node_type])
+        out = self.lin(x_dict[node_type])
         return out, embedding
-
 
 class HGT(torch.nn.Module):
     def __init__(self, hidden_channels, out_channels, num_heads, num_layers, data):

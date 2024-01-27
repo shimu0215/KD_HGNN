@@ -4,6 +4,7 @@ import os.path as osp
 
 import torch_geometric.transforms as T
 from torch_geometric.datasets import IMDB, DBLP, OGB_MAG
+from torch_geometric.loader import DataLoader, NeighborLoader, HGTLoader
 
 
 def re_split(args, data):
@@ -66,7 +67,11 @@ def load_data_metapath(args):
         transform = T.AddMetaPaths(metapaths=metapaths, drop_orig_edge_types=True,
                                    drop_unconnected_node_types=True)
         dataset = IMDB(path, transform=transform)
+
+
+
         data = dataset[0]
+        data = DataLoader(data, batch_size=32, shuffle=True)
 
     if args.dataset == 'DBLP':
         args.node = 'author'
@@ -101,6 +106,26 @@ def load_data_metapath(args):
 
 
 def load_data_HGT(args):
+
+    if args.dataset == 'OGB':
+        args.node = 'paper'
+        path = osp.join(osp.dirname(osp.realpath(__file__)), '../../data/OGB_MAG')
+
+        transform = T.ToUndirected(merge=True)
+        dataset = OGB_MAG(path, preprocess='metapath2vec', transform=transform)
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        data = dataset[0].to(device, 'x', 'y')
+
+        train_input_nodes = ('paper', data['paper'].train_mask)
+        val_input_nodes = ('paper', data['paper'].val_mask)
+        kwargs = {'batch_size': 256, 'num_workers': 6, 'persistent_workers': True}
+
+        train_loader = HGTLoader(data, num_samples=[1024] * 4, shuffle=True,
+                                 input_nodes=train_input_nodes, **kwargs)
+        val_loader = HGTLoader(data, num_samples=[1024] * 4,
+                               input_nodes=val_input_nodes, **kwargs)
+        return [train_loader, val_loader], {}
+
     if args.dataset == 'IMDB':
         args.node = 'movie'
         path = osp.join(osp.dirname(osp.realpath(__file__)), '../../data/IMDB')
@@ -118,15 +143,6 @@ def load_data_HGT(args):
             neighbor = get_one_hop_neighbor(args, IMDB(path).data)
         dataset = DBLP(path, transform=T.Constant(node_types='conference'))
         data = dataset[0]
-
-    if args.dataset == 'OGB':
-        args.node = 'paper'
-        path = osp.join(osp.dirname(osp.realpath(__file__)), '../../data/OGB_MAG')
-        neighbor = []
-        if args.use_neighbor:
-            neighbor = get_one_hop_neighbor(args, OGB_MAG(path, preprocess='TransE').data)
-        dataset = OGB_MAG(path, preprocess='TransE')
-        data = dataset.data
 
     if args.split:
         data = re_split(args, data)

@@ -5,7 +5,7 @@ def parse_opt():
     parser = argparse.ArgumentParser()
 
     # global settings
-    parser.add_argument('--dataset', type=str, default='IMDB', help="select the dataset, IMDB / DBLP / AMiner")
+    parser.add_argument('--dataset', type=str, default='OGB', help="select the dataset, IMDB / DBLP / AMiner")
     parser.add_argument('--node', type=str, default='movie', help="select the target node, movie / author")
     parser.add_argument('--random_seed', type=int, default=123, help=" ")
 
@@ -21,7 +21,7 @@ def parse_opt():
     parser.add_argument('--dropout_ratio', type=float, default=0.6, help="dropout ratio for student")
     parser.add_argument('--epochs', type=int, default=1000, help="epochs for student")
     parser.add_argument('--patience', type=int, default=50, help="patience for student")
-    parser.add_argument('--use_neighbor', type=bool, default=True, help="use one hop neighbor as part of input")
+    parser.add_argument('--use_neighbor', type=bool, default=False, help="use one hop neighbor as part of input")
 
     # optimizer settings for student
     parser.add_argument('--lr', type=float, default=0.005, help="lr for student")
@@ -34,11 +34,11 @@ def parse_opt():
     parser.add_argument('--struc_weight', type=int, default=1, help="weight of loss on structural")
 
     # teacher settings
-    parser.add_argument('--teacher_model', type=str, default='HAN', help="select the teacher model, HAN / HGT")
+    parser.add_argument('--teacher_model', type=str, default='HGT', help="select the teacher model, HAN / HGT")
     parser.add_argument('--teacher_patience', type=int, default=100, help="patience for teacher")
     parser.add_argument('--teacher_epochs', type=int, default=300, help="epochs for teacher")
     parser.add_argument('--teacher_hidden', type=int, default=128, help="hidden size for teacher")
-    parser.add_argument('--teacher_num_layer', type=int, default=1, help="hidden size for teacher")
+    parser.add_argument('--teacher_num_layer', type=int, default=2, help="hidden size for teacher")
 
     # split dataset
     parser.add_argument('--split', type=bool, default=False, help="re group the dataset")

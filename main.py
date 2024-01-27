@@ -1,6 +1,8 @@
 from argument import parse_opt
 from HGNN.run_HAN import train_HAN, eval_HAN
 from HGNN.run_HGT import train_HGT, eval_HGT
+from HGNN.run_HGT_OGB import train_HGT_OGB
+from HGNN.run_HAN_OGB import train_HAN_OGB
 from data_prepare import load_data_metapath, load_data_HGT
 from utils import set_seed
 from mlp_label import run_mlp_label
@@ -12,6 +14,15 @@ def train_teacher_model(args, data):
     train the teacher model
     :return: evaluate result of the teacher model
     """
+    if args.dataset == 'OGB':
+        if args.teacher_model == 'HAN':
+            res_teacher = train_HAN_OGB(args, data)
+            return res_teacher
+
+        if args.teacher_model == 'HGT':
+            res_teacher = train_HGT_OGB(args, data)
+            return res_teacher
+
     if args.teacher_model == 'HAN':
         res_teacher = train_HAN(args, data)
         return res_teacher
