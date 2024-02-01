@@ -9,8 +9,9 @@ class LogitLoss(nn.Module):
         self.kld_loss = nn.KLDivLoss()
 
     def forward(self, prediction, soft_target):
-        log_probs = F.log_softmax(prediction, dim=1)
-        loss = self.kld_loss(log_probs, F.softmax(soft_target, dim=1))
+        t = 1
+        log_probs = F.log_softmax(prediction/t, dim=1)
+        loss = self.kld_loss(log_probs, F.softmax(soft_target/t, dim=1))
 
         return loss
 
@@ -29,6 +30,7 @@ class GtLoss(nn.Module):
 class StructureLoss(nn.Module):
     def __init__(self):
         super(StructureLoss, self).__init__()
+        # self.mse_loss = nn.L1Loss()
         self.mse_loss = nn.MSELoss()
 
     def forward(self, prediction, target, student_sim_ind):
@@ -41,7 +43,7 @@ class StructureLoss(nn.Module):
 
         struc_loss = self.mse_loss(predictions, targets)
 
-        return struc_loss / len(prediction)
+        return struc_loss
 
 
 class EmbeddingLoss(nn.Module):

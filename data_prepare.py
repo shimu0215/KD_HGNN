@@ -67,7 +67,9 @@ def load_data_metapath(args):
         transform = T.AddMetaPaths(metapaths=metapaths, drop_orig_edge_types=True,
                                    drop_unconnected_node_types=True)
         dataset = IMDB(path, transform=transform)
+        transform = T.Constant(node_types='conference')
         data = dataset[0]
+        data = transform(data)
 
     if args.dataset == 'DBLP':
         args.node = 'author'

@@ -52,7 +52,7 @@ def train_HAN(args, data):
         loss = train()
         train_acc, val_acc, test_acc = test(model, data, node_type)
 
-        if epoch % 1 == 0:
+        if epoch % 10 == 0:
             print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Train: {train_acc:.4f}, '
                   f'Val: {val_acc:.4f}, Test: {test_acc:.4f}')
 
@@ -74,7 +74,7 @@ def train_HAN(args, data):
     with torch.no_grad():
         model.eval()
         predictions, embedding = model(data.x_dict, data.edge_index_dict, args.node)
-        acc, f1_macro, f1_micro = evaluate_model(data, node_type, predictions)
+        acc, f1_macro, f1_micro = evaluate_model(data, node_type, predictions.argmax(dim=-1))
 
     torch.save(predictions, path + 'result')
     torch.save(embedding, path + 'embedding')
@@ -89,11 +89,11 @@ def train_HAN(args, data):
 def eval_HAN(args, data):
 
     num_class = data[args.node].y.unique().size(0)
-    model = HAN(in_channels=-1, out_channels=num_class, data=data)
+    model = HAN(in_channels=-1, out_channels=num_class, data=data, hidden_channels=args.teacher_hidden, num_layers=args.teacher_num_layer)
 
     path = './GNN_result/' + args.dataset + '/' + args.teacher_model + '/' + args.teacher_model
-    record = torch.load(path)
-
+    record = torch.load(path, map_location=torch.device('cpu'))
+    out, embedding = model(data.x_dict, data.edge_index_dict, args.node)
     model.load_state_dict(record['model_state_dict'])
     predictions = model(data.x_dict, data.edge_index_dict, args.node)[0].argmax(dim=-1)
 

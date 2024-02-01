@@ -71,7 +71,7 @@ def train_HGT(args, data):
     torch.save({'model_state_dict': model.state_dict()}, path + args.teacher_model)
     with torch.no_grad():
         predictions, embedding = model(data.x_dict, data.edge_index_dict, node_type)
-        acc, f1_macro, f1_micro = evaluate_model(data, node_type, predictions)
+        acc, f1_macro, f1_micro = evaluate_model(data, node_type, predictions.argmax(dim=-1))
 
     torch.save(predictions, path + 'result')
     torch.save(embedding, path + 'embedding')

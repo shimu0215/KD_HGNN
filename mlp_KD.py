@@ -105,8 +105,9 @@ def run_mlp_KD(args, data, neighbor=None):
             print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Train: {train_acc:.4f}, '
                   f'Val: {val_acc:.4f}, Test: {test_acc:.4f}')
 
-            # print(f'gt: {gt_loss.item():.4f}, logit: {logit_loss.item():.4f}, emb: {embedding_loss.item():.4f}, '
-            #       f'struc: {structure_loss.item():.4f}')
+            print(f'gt: {gt_loss.item():.4f}, logit: {logit_loss.item():.4f}, emb: {embedding_loss.item():.4f}, '
+                  f'struc: {structure_loss.item():.4f}')
+            # print(f'logit: {structure_loss.item():.4f}')
 
         # early stop
         if best_val_acc <= val_acc:

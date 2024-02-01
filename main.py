@@ -7,6 +7,7 @@ from data_prepare import load_data_metapath, load_data_HGT
 from utils import set_seed
 from mlp_label import run_mlp_label
 from mlp_KD import run_mlp_KD
+import numpy as np
 
 
 def train_teacher_model(args, data):
@@ -43,14 +44,7 @@ def eval_model(args, data):
         train_acc, val_acc, test_acc = eval_HGT(args, data)
         return train_acc, val_acc, test_acc
 
-
-if __name__ == "__main__":
-
-    # get parameters
-    args = parse_opt()
-    print(args)
-
-    # set random seeds
+def run(args):
     set_seed(args.random_seed)
 
     # load data and one hop neighbor
@@ -66,8 +60,16 @@ if __name__ == "__main__":
 
     # train student model
     if args.train_student:
-        acc_mlp_KD, f1_macro_KD, f1_micro_KD = run_mlp_KD(args, data, neighbor)
-        print("KD-Acc: ", acc_mlp_KD.item(), " Macro-F1: ", f1_macro_KD.item(), " Micro-F1: ", f1_micro_KD.item())
+        f1_macro_list = []
+        f1_micro_list = []
+        for i in range(1):
+            set_seed(args.random_seed)
+            acc_mlp_KD, f1_macro_KD, f1_micro_KD = run_mlp_KD(args, data, neighbor)
+            f1_micro_list.append(f1_micro_KD * 100)
+            f1_macro_list.append(f1_macro_KD * 100)
+
+        print(" Macro-F1: mean-", np.mean(f1_macro_list), " std- ", np.std(f1_macro_list))
+        print(" Micro-F1: mean-", np.mean(f1_micro_list), " std- ", np.std(f1_micro_list))
 
     # train a mlp with ground truth in train set
     if args.compare_to_mlp:
@@ -78,3 +80,51 @@ if __name__ == "__main__":
     if args.eval_teacher_model:
         acc, f1_macro, f1_micro = eval_model(args, data)
         print(f'Teacher-Acc: {acc:.4f}, Macro-F1: {f1_macro:.4f}, Micro-F1: {f1_micro:.4f}')
+
+
+if __name__ == "__main__":
+
+    # get parameters
+    args = parse_opt()
+    print(args)
+
+    args.dataset = 'DBLP'
+
+    args.split = False
+    args.train_ratio = 0.4
+    args.val_ratio = 0.4
+
+
+    args.teacher_model = 'HAN'
+    print(args.teacher_model)
+
+    print('train teacher')
+    args.retrain_teacher = True
+    args.train_student = False
+    run(args)
+
+    print('train student')
+    args.retrain_teacher = False
+    args.train_student = True
+
+    print('train KD')
+    args.use_neighbor = False
+    args.lr = 0.003
+    args.num_layers = 3
+    args.logit_weight = 5 * 1
+    args.gt_weight = 2 * 1
+    args.emb_weight = 0.5 * 1
+    args.struc_weight = 100 * 1
+    run(args)
+
+    print('train KD-n')
+    args.use_neighbor = True
+    args.lr = 0.0005
+    args.num_layers = 2
+    args.logit_weight = 5 * 1
+    args.gt_weight = 2 * 1
+    args.emb_weight = 0.5 * 0.1
+    args.struc_weight = 100 * 0.001
+    run(args)
+
+
