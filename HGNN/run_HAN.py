@@ -89,13 +89,14 @@ def train_HAN(args, data):
 def eval_HAN(args, data):
 
     num_class = data[args.node].y.unique().size(0)
-    model = HAN(in_channels=-1, out_channels=num_class, data=data, hidden_channels=args.teacher_hidden, num_layers=args.teacher_num_layer)
+    model_HAN = HAN(in_channels=-1, out_channels=num_class, data=data, hidden_channels=args.teacher_hidden, num_layers=args.teacher_num_layer)
 
     path = './GNN_result/' + args.dataset + '/' + args.teacher_model + '/' + args.teacher_model
     record = torch.load(path, map_location=torch.device('cpu'))
-    out, embedding = model(data.x_dict, data.edge_index_dict, args.node)
-    model.load_state_dict(record['model_state_dict'])
-    predictions = model(data.x_dict, data.edge_index_dict, args.node)[0].argmax(dim=-1)
+    out, embedding = model_HAN(data.x_dict, data.edge_index_dict, args.node)
+    model_HAN.load_state_dict(record['model_state_dict'])
+    model_HAN.eval()
+    predictions = model_HAN(data.x_dict, data.edge_index_dict, args.node)[0].argmax(dim=-1)
 
     acc, f1_macro, f1_micro = evaluate_model(data, args.node, predictions)
 

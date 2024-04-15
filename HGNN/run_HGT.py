@@ -70,6 +70,7 @@ def train_HGT(args, data):
 
     torch.save({'model_state_dict': model.state_dict()}, path + args.teacher_model)
     with torch.no_grad():
+        model.eval()
         predictions, embedding = model(data.x_dict, data.edge_index_dict, node_type)
         acc, f1_macro, f1_micro = evaluate_model(data, node_type, predictions.argmax(dim=-1))
 
@@ -92,6 +93,7 @@ def eval_HGT(args, data):
     record = torch.load(path)
 
     model.load_state_dict(record['model_state_dict'])
+    model.eval()
     predictions = model(data.x_dict, data.edge_index_dict, args.node)[0].argmax(dim=-1)
 
     acc, f1_macro, f1_micro = evaluate_model(data, args.node, predictions)
