@@ -1,16 +1,12 @@
 import torch
 import torch.optim as optim
-import torch.nn.functional as F
 from loss_function import LogitLoss, StructureLoss, EmbeddingLoss, GtLoss
 from data_prepare import load_data_metapath
 from utils import get_f1_macro, get_f1_micro, get_similarity
 
-from models import MLP, GNN
+from models import MLP
 
 from typing import List
-import random
-
-
 
 def run_mlp_KD(args, data, neighbor=None):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -41,9 +37,9 @@ def run_mlp_KD(args, data, neighbor=None):
     X_test = X[test_mask]
 
     # load teacher result
-    teacher_logit = torch.load('GNN_result/' + args.dataset + '/' + args.teacher_model + '/result')
-    teacher_embedding = torch.load('GNN_result/' + args.dataset + '/' + args.teacher_model + '/embedding')[node_type]
-    teacher_similarity = torch.load('GNN_result/' + args.dataset + '/' + args.teacher_model + '/sim')
+    teacher_logit = torch.load('GNN_result/' + args.dataset + '/' + args.teacher_model + '/result', map_location=torch.device('cpu'))
+    teacher_embedding = torch.load('GNN_result/' + args.dataset + '/' + args.teacher_model + '/embedding', map_location=torch.device('cpu'))[node_type]
+    teacher_similarity = torch.load('GNN_result/' + args.dataset + '/' + args.teacher_model + '/sim', map_location=torch.device('cpu'))
 
     # initialize model
     embedding_dim = teacher_embedding.shape[1]
@@ -53,7 +49,6 @@ def run_mlp_KD(args, data, neighbor=None):
     model = model.to(device)
 
     # loss functions
-
     logit_criterion = LogitLoss()
     gt_criterion = GtLoss()
     embedding_criterion = EmbeddingLoss()
@@ -107,7 +102,6 @@ def run_mlp_KD(args, data, neighbor=None):
 
             print(f'gt: {gt_loss.item():.4f}, logit: {logit_loss.item():.4f}, emb: {embedding_loss.item():.4f}, '
                   f'struc: {structure_loss.item():.4f}')
-            # print(f'logit: {structure_loss.item():.4f}')
 
         # early stop
         if best_val_acc <= val_acc:

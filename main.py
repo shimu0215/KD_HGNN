@@ -15,14 +15,6 @@ def train_teacher_model(args, data):
     train the teacher model
     :return: evaluate result of the teacher model
     """
-    if args.dataset == 'OGB':
-        # if args.teacher_model == 'HAN':
-        #     res_teacher = train_HAN_OGB(args, data)
-        #     return res_teacher
-
-        if args.teacher_model == 'HGT':
-            res_teacher = train_HGT_OGB(args, data)
-            return res_teacher
 
     if args.teacher_model == 'HAN':
         res_teacher = train_HAN(args, data)
@@ -62,8 +54,7 @@ def run(args):
     if args.train_student:
         f1_macro_list = []
         f1_micro_list = []
-        for i in range(1):
-            set_seed(args.random_seed)
+        for i in range(5):
             acc_mlp_KD, f1_macro_KD, f1_micro_KD = run_mlp_KD(args, data, neighbor)
             f1_micro_list.append(f1_micro_KD * 100)
             f1_macro_list.append(f1_macro_KD * 100)
@@ -73,13 +64,15 @@ def run(args):
 
     # train a mlp with ground truth in train set
     if args.compare_to_mlp:
+        set_seed(args.random_seed)
         acc_mlp_mlp, f1_macro_mlp, f1_micro_mlp = run_mlp_label(args, data)
         print("MLP-Acc: ", acc_mlp_mlp.item(), " Macro-F1: ", f1_macro_mlp.item(), " Micro-F1: ", f1_micro_mlp.item())
 
     # evaluate teacher model
     if args.eval_teacher_model:
-        acc, f1_macro, f1_micro = eval_model(args, data)
-        print(f'Teacher-Acc: {acc:.4f}, Macro-F1: {f1_macro:.4f}, Micro-F1: {f1_micro:.4f}')
+        set_seed(args.random_seed)
+        acc_teacher, f1_macro_teacher, f1_micro_teacher = eval_model(args, data)
+        print(f'Teacher-Acc: {acc_teacher:.4f}, Macro-F1: {f1_macro_teacher:.4f}, Micro-F1: {f1_micro_teacher:.4f}')
 
 
 if __name__ == "__main__":
@@ -89,42 +82,10 @@ if __name__ == "__main__":
     print(args)
 
     args.dataset = 'DBLP'
+    args.teacher_model = 'HGT'
 
-    args.split = False
+    args.split = True
     args.train_ratio = 0.4
     args.val_ratio = 0.4
 
-
-    args.teacher_model = 'HAN'
-    print(args.teacher_model)
-
-    print('train teacher')
-    args.retrain_teacher = True
-    args.train_student = False
     run(args)
-
-    print('train student')
-    args.retrain_teacher = False
-    args.train_student = True
-
-    print('train KD')
-    args.use_neighbor = False
-    args.lr = 0.003
-    args.num_layers = 3
-    args.logit_weight = 5 * 1
-    args.gt_weight = 2 * 1
-    args.emb_weight = 0.5 * 1
-    args.struc_weight = 100 * 1
-    run(args)
-
-    print('train KD-n')
-    args.use_neighbor = True
-    args.lr = 0.0005
-    args.num_layers = 2
-    args.logit_weight = 5 * 1
-    args.gt_weight = 2 * 1
-    args.emb_weight = 0.5 * 0.1
-    args.struc_weight = 100 * 0.001
-    run(args)
-
-

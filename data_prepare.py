@@ -4,7 +4,7 @@ import os.path as osp
 
 import torch_geometric.transforms as T
 from torch_geometric.datasets import IMDB, DBLP, OGB_MAG
-from torch_geometric.loader import DataLoader, NeighborLoader, HGTLoader
+from torch_geometric.loader import HGTLoader
 
 
 def re_split(args, data):
@@ -37,12 +37,10 @@ def get_one_hop_neighbor(args, data):
     edge_dict = data.edge_index_dict
     neighbor_dict = {}
     for edge_type in edge_dict:
-        # get metapath type
         if edge_type[0] != args.node:
             continue
         current_type = edge_dict[edge_type]
 
-        # initialize
         neighbors = torch.zeros([data.x_dict[args.node].shape[0], data.x_dict[edge_type[2]][0].shape[0]])
         counts = torch.zeros(data.x_dict[args.node].shape[0])
 
@@ -161,3 +159,38 @@ def load_data_HGT(args, get_whole_OGB=False):
         data = re_split(args, data)
 
     return data, neighbor
+
+def load_data_homo(args):
+    if args.dataset == 'IMDB':
+        args.node = 'movie'
+        path = osp.join(osp.dirname(osp.realpath(__file__)), '../../data/IMDB')
+
+        metapaths = [[('movie', 'actor'), ('actor', 'movie')],
+                     [('movie', 'director'), ('director', 'movie')]]
+        transform = T.AddMetaPaths(metapaths=metapaths, drop_orig_edge_types=True,
+                                   drop_unconnected_node_types=True)
+        dataset = IMDB(path, transform=transform)
+        transform = T.Constant(node_types='conference')
+        data = dataset[0]
+        data = transform(data)
+
+    if args.dataset == 'DBLP':
+        args.node = 'author'
+        path = osp.join(osp.dirname(osp.realpath(__file__)), '../../data/DBLP')
+        neighbor = []
+        if args.use_neighbor:
+            neighbor = get_one_hop_neighbor(args, DBLP(path).data)
+        metapaths = [[('author', 'paper'), ('paper', 'author')],
+                     [('author', 'paper'), ('paper', 'term'), ('term', 'paper'), ('paper', 'author')],
+                     [('author', 'paper'), ('paper', 'conference'), ('conference', 'paper'), ('paper', 'author')]]
+        transform = T.AddMetaPaths(metapaths=metapaths, drop_orig_edge_types=True,
+                                   drop_unconnected_node_types=True)
+        transform_2 = T.Constant(node_types='conference')
+        dataset = DBLP(path, transform=transform)
+        data = dataset[0]
+        data = transform_2(data)
+
+    if args.split:
+        data = re_split(args, data)
+
+    return data.to_homogeneous()

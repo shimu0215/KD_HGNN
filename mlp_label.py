@@ -51,11 +51,9 @@ def run_mlp_label(args, data):
 
     for epoch in range(num_epochs):
         model.train()
-        # Forward pass
         _, outputs = model(X_train)
         loss = criterion(outputs, Y_train)
 
-        # Backward pass and optimization
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -77,7 +75,6 @@ def run_mlp_label(args, data):
                   f'for {start_patience} epochs')
             break
 
-    # Testing the model
     with torch.no_grad():
         model.eval()
         _, predictions = model(X_test)

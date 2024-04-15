@@ -18,10 +18,10 @@ def get_f1_micro(labels, predictions):
 def evaluate_model(data, node_type, pred):
     mask = data[node_type]['test_mask']
     Y_test = data[node_type].y[mask]
-    predctions = pred[mask]
-    acc = (predctions == Y_test).sum() / mask.sum()
-    f1_macro = get_f1_macro(labels=Y_test, predictions=predctions)
-    f1_micro = get_f1_micro(labels=Y_test, predictions=predctions)
+    predictions = pred[mask]
+    acc = (predictions == Y_test).sum() / mask.sum()
+    f1_macro = get_f1_macro(labels=Y_test, predictions=predictions)
+    f1_micro = get_f1_micro(labels=Y_test, predictions=predictions)
 
     return acc.item(), f1_macro, f1_micro
 

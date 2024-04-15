@@ -50,10 +50,8 @@ class EmbeddingLoss(nn.Module):
     def __init__(self):
         super(EmbeddingLoss, self).__init__()
         self.cos_loss = nn.CosineEmbeddingLoss()
-        # self.mse_loss = nn.MSELoss()
 
     def forward(self, prediction, target):
         loss = self.cos_loss(prediction[-1], target, torch.ones(target.size()[0]))
-        # loss = self.mse_loss(prediction[-1], target)
 
         return loss
